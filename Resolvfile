@@ -1,24 +1,21 @@
 
 
 # First rule
-Dire-bonjour
-Se-voir Et-voila toto.txt
+Dire-bonjour :  Se-voir Et-voila toto.txt
 Salut
 Monsieur
 
-Se-voir
-Etrela titi.txt
+Se-voir : Etrela titi.txt
 Viens!
 Par
 Là
 Toi!
 
-Et-voila
-Coucou
+Et-voila:  Coucou
 Rien
 Du
 Tout
 
 Coucou
-Nada
+Hello Kamarad
 Salut copain

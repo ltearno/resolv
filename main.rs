@@ -45,10 +45,36 @@ fn fetch_lines<'a>() -> Vec<String> {
 
 fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
     if let None = r.name {
-        r.name = Some(line);
-    } else if let None = r.dependencies {
-        r.dependencies = Some(line.split(" ").filter(|name| !name.contains(".")).collect());
-        r.resources = Some(line.split(" ").filter(|name| name.contains(".")).collect());
+        let parts: Vec<&str> = line.split(":").collect();
+        match parts.len() {
+            0 => {
+                r.name = Some(line.trim());
+            }
+
+            1 => {
+                r.name = Some(parts[0].trim());
+            }
+
+            2 => {
+                r.name = Some(parts[0].trim());
+                r.dependencies = Some(
+                    parts[1]
+                        .trim()
+                        .split(" ")
+                        .filter(|name| !name.contains("."))
+                        .collect(),
+                );
+                r.resources = Some(
+                    parts[1]
+                        .trim()
+                        .split(" ")
+                        .filter(|name| name.contains("."))
+                        .collect(),
+                );
+            }
+
+            _ => {}
+        }
     } else if let None = r.script {
         r.script = Some(vec![line]);
     } else if let Some(lines) = &mut r.script {
