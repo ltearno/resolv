@@ -5,14 +5,9 @@ use std::io::BufReader;
 #[derive(Debug)]
 struct Rule<'a> {
     name: Option<&'a str>,
-    dependencies: Option<Vec<Dependency<'a>>>,
+    dependencies: Option<Vec<&'a str>>,
+    resources: Option<Vec<&'a str>>,
     script: Option<Vec<&'a str>>,
-}
-
-#[derive(Debug)]
-enum Dependency<'a> {
-    Resource(&'a str),
-    Rule(&'a str),
 }
 
 impl<'a> Rule<'a> {
@@ -20,9 +15,18 @@ impl<'a> Rule<'a> {
         Rule {
             name: None,
             dependencies: None,
+            resources: None,
             script: None,
         }
     }
+
+    fn latest_run(&self) -> Option<u32> {
+        None
+    }
+}
+
+fn last_write_time(path: &str) -> u32 {
+    0
 }
 
 enum State {
@@ -43,17 +47,8 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
     if let None = r.name {
         r.name = Some(line);
     } else if let None = r.dependencies {
-        r.dependencies = Some(
-            line.split(" ")
-                .map(|name| {
-                    if name.contains(".") {
-                        Dependency::Resource(name)
-                    } else {
-                        Dependency::Rule(name)
-                    }
-                })
-                .collect(),
-        );
+        r.dependencies = Some(line.split(" ").filter(|name| !name.contains(".")).collect());
+        r.resources = Some(line.split(" ").filter(|name| name.contains(".")).collect());
     } else if let None = r.script {
         r.script = Some(vec![line]);
     } else if let Some(lines) = &mut r.script {
@@ -89,11 +84,9 @@ fn main() {
             None => println!("((in anonymous rule))"),
         }
 
-        if let Some(dependencies) = &rule.dependencies {
-            for dependency in dependencies {
-                if let Dependency::Resource(path) = dependency {
-                    println!("* use of resource {}", path);
-                }
+        if let Some(resources) = &rule.resources {
+            for path in resources {
+                println!("* use of resource {}", path);
             }
         }
 
@@ -109,26 +102,45 @@ fn main() {
     println!("done");
 }
 
-fn build_plan<'a>(rules: &'a Vec<Rule<'a>>, first_rule: &str, plan: &mut Vec<&'a Rule<'a>>) {
+fn build_plan<'a>(
+    rules: &'a Vec<Rule<'a>>,
+    first_rule: &str,
+    plan: &mut Vec<&'a Rule<'a>>,
+) -> bool {
     match find_rule(rules, first_rule) {
         None => {
             println!("[WARNING] skipping not found rule {}", first_rule);
+
+            false
         }
 
         Some(rule) => {
+            let own_last_execution = rule.latest_run();
+            let mut execute_script: bool = own_last_execution.is_none();
+
             if let Some(dependencies) = &rule.dependencies {
                 for dependency in dependencies {
-                    match dependency {
-                        Dependency::Rule(rule) => {
-                            build_plan(rules, rule, plan);
-                        }
+                    let rebuilded = build_plan(rules, dependency, plan);
 
-                        Dependency::Resource(_) => {}
+                    execute_script = execute_script || rebuilded;
+                }
+            }
+
+            if let Some(own_last_execution) = own_last_execution {
+                if let Some(resources) = &rule.resources {
+                    for resource in resources {
+                        if last_write_time(resource) > own_last_execution {
+                            execute_script = true;
+                        }
                     }
                 }
             }
 
-            plan.push(&rule);
+            if execute_script {
+                plan.push(&rule);
+            }
+
+            execute_script
         }
     }
 }
