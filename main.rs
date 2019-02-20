@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::fs::File;
+use std::io::prelude::*;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::io::BufWriter;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
@@ -35,11 +37,7 @@ impl<'a> Rule<'a> {
 
 fn last_write_time(path: &str) -> u64 {
     match File::open(path) {
-        Err(e) => {
-            println!("did not find resource {}", path);
-
-            0
-        }
+        Err(_) => 0,
 
         Ok(f) => {
             let res = f
@@ -109,29 +107,57 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
     }
 }
 
+fn read_state_store() -> HashMap<String, u64> {
+    let mut res: HashMap<String, u64> = HashMap::new();
+
+    if let Ok(file) = File::open(".resolve") {
+        BufReader::new(&file).lines().for_each(|line| {
+            if let Ok(line) = line {
+                let parts: Vec<&str> = line.split(":").collect();
+                res.insert(
+                    String::from(parts[0]),
+                    parts[1].parse::<u64>().expect("bad"),
+                );
+            }
+        });
+    }
+
+    res
+}
+
+fn store_state_store(rules_state_store: &HashMap<&str, u64>) {
+    let file = File::create(".resolve").expect("error opening cache file");
+    let mut writer = BufWriter::new(&file);
+    for (name, value) in rules_state_store {
+        match writer.write_all(format!("{}:{}\n", name, value).as_bytes()) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
+    }
+}
+
 fn main() {
     println!("Resolv v0.1, welcome\n");
 
     let mut rules_state_store: HashMap<&str, u64> = HashMap::new();
 
+    let state_store_from_settings = read_state_store();
+    for (name, value) in &state_store_from_settings {
+        rules_state_store.insert(name, *value);
+    }
+
     let lines = fetch_file();
     let rules = parse_rules(&lines);
 
-    // let's try to execute the first rule
     let to_build: &str = match rules[0].name {
         None => "",
         Some(name) => name,
     };
 
-    println!("building rule {}", to_build);
-
-    let rule = find_rule(&rules, to_build).expect("not found building rule");
-    println!("found {:?}", rule);
-
-    run_for_rule(&rules, to_build, &mut rules_state_store);
+    println!("run for target '{}'", to_build);
     run_for_rule(&rules, to_build, &mut rules_state_store);
 
-    //println!("plan: {:?}", plan);
+    store_state_store(&rules_state_store);
 
     println!("done");
 }
@@ -142,9 +168,11 @@ fn run_for_rule<'a>(
     rules_state_store: &mut HashMap<&'a str, u64>,
 ) {
     let mut plan: Vec<&Rule> = Vec::new();
+
+    println!("building execution plan");
     build_plan(rules, to_build, &mut plan, rules_state_store);
 
-    println!("executing {}", to_build);
+    println!("running execution plan");
     for rule in &plan {
         match rule.name {
             Some(name) => println!("((in rule {}))", name),
@@ -153,7 +181,7 @@ fn run_for_rule<'a>(
 
         if let Some(resources) = &rule.resources {
             for path in resources {
-                println!("* use of resource {}", path);
+                println!("((use resource {}))", path);
             }
         }
 
@@ -270,7 +298,7 @@ fn parse_rules<'a>(lines: &'a Vec<String>) -> Vec<Rule<'a>> {
         if let State::Completing = state {
             if line.starts_with("#") {
             } else if line.is_empty() {
-                println!("processed rule {:?}", current_rule);
+                //println!("processed rule {:?}", current_rule);
                 current_rule = Some(push_and_prepare(&mut rules, current_rule));
 
                 state = State::Waiting;
