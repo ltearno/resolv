@@ -52,7 +52,27 @@ fn main() {
 
     let rules = parse_rules(&lines);
 
+    // let's try to execute the first rule
+    let to_build: &str = match rules[0].name {
+        None => "",
+        Some(name) => name,
+    };
+
+    println!("building rule {}", to_build);
+
     println!("done");
+}
+
+fn find_rule<'a>(rules: &'a Vec<Rule<'a>>, search: &'a str) -> Option<&'a Rule<'a>> {
+    for rule in rules {
+        if let Some(name) = rule.name {
+            if name == search {
+                return Some(rule);
+            }
+        }
+    }
+
+    None
 }
 
 fn fetch_file() -> Vec<String> {
