@@ -2,20 +2,20 @@
 
 # First rule
 Dire-bonjour :  Se-voir Et-voila toto.txt
-Salut
-Monsieur
+    echo Hello
+    echo Hello3
 
 Se-voir : Etrela titi.txt
-Viens!
-Par
-Là
-Toi!
+    echo "Viens!"
+    echo Par
+    ls -la ~
+    echo Toi!
 
 Et-voila:  Coucou
-Rien
-Du
-Tout
+    echo Rien
+    echo Du
+    echo Tout
 
 Coucou
-Hello Kamarad
-Salut copain
+    echo Hello Kamarad
+    echo Salut copain

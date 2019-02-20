@@ -1,13 +1,13 @@
 extern crate getopts;
 use getopts::Options;
-use std::env;
-
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::io::BufWriter;
+use std::process::Command;
 use std::result::Result;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -215,6 +215,14 @@ fn run_for_rule<'a>(
         if let Some(script) = &rule.script {
             for command in script {
                 println!("{}", command);
+
+                let mut cmd = Command::new("sh");
+                cmd.arg("-c").arg(command);
+                println!(
+                    "-> {}",
+                    String::from_utf8(cmd.output().expect("error running command").stdout)
+                        .expect("invalid utf8")
+                );
             }
         }
 
