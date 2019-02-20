@@ -60,10 +60,40 @@ fn main() {
 
     println!("building rule {}", to_build);
 
+    let rule = find_rule(&rules, to_build).expect("not found building rule");
+    println!("found {:?}", rule);
+
+    let mut plan: Vec<&Rule> = Vec::new();
+    build_plan(&rules, to_build, &mut plan);
+
+    for rule in &plan {
+        println!("- {}", rule.name.expect("error"));
+    }
+
+    //println!("plan: {:?}", plan);
+
     println!("done");
 }
 
-fn find_rule<'a>(rules: &'a Vec<Rule<'a>>, search: &'a str) -> Option<&'a Rule<'a>> {
+fn build_plan<'a>(rules: &'a Vec<Rule<'a>>, first_rule: &str, plan: &mut Vec<&'a Rule<'a>>) {
+    match find_rule(rules, first_rule) {
+        None => {
+            println!("[WARNING] skipping not found rule {}", first_rule);
+        }
+
+        Some(rule) => {
+            if let Some(dependencies) = &rule.dependencies {
+                for dependency in dependencies {
+                    build_plan(rules, dependency, plan);
+                }
+            }
+
+            plan.push(&rule);
+        }
+    }
+}
+
+fn find_rule<'a, 'b>(rules: &'a Vec<Rule<'a>>, search: &'b str) -> Option<&'a Rule<'a>> {
     for rule in rules {
         if let Some(name) = rule.name {
             if name == search {
