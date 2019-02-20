@@ -66,8 +66,18 @@ fn main() {
     let mut plan: Vec<&Rule> = Vec::new();
     build_plan(&rules, to_build, &mut plan);
 
+    println!("executing {}", to_build);
     for rule in &plan {
-        println!("- {}", rule.name.expect("error"));
+        match rule.name {
+            Some(name) => println!("((in rule {}))", name),
+            None => println!("((in anonymous rule))"),
+        }
+
+        if let Some(script) = &rule.script {
+            for command in script {
+                println!("{}", command);
+            }
+        }
     }
 
     //println!("plan: {:?}", plan);
