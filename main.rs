@@ -48,12 +48,29 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
 fn main() {
     println!("Resolv v0.1, welcome\n");
 
-    let mut rules: Vec<Rule> = Vec::new();
+    let lines = fetch_file();
 
+    let rules = parse_rules(&lines);
+
+    println!("done");
+}
+
+fn fetch_file() -> Vec<String> {
     let mut lines = fetch_lines();
     lines.push(String::from(""));
 
-    let lines: Vec<&str> = lines
+    lines
+}
+
+fn push_and_prepare<'a>(rules: &mut Vec<Rule<'a>>, rule: Rule<'a>) -> Rule<'a> {
+    rules.push(rule);
+    Rule::new()
+}
+
+fn parse_rules<'a>(lines: &'a Vec<String>) -> Vec<Rule<'a>> {
+    let mut rules: Vec<Rule> = Vec::new();
+
+    let lines: Vec<&'a str> = lines
         .iter()
         .map(|line| line.as_str())
         .map(|line| line.trim())
@@ -61,11 +78,6 @@ fn main() {
 
     let mut current_rule = Rule::new();
     let mut state: State = State::Waiting;
-
-    fn push_and_prepare<'a>(rules: &mut Vec<Rule<'a>>, rule: Rule<'a>) -> Rule<'a> {
-        rules.push(rule);
-        Rule::new()
-    }
 
     for line in &lines {
         if let State::Waiting = state {
@@ -87,5 +99,5 @@ fn main() {
         }
     }
 
-    //println!("rules: {:?}", rules);
+    rules
 }

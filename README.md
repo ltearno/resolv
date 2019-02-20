@@ -420,7 +420,8 @@ That's a sign of progress, keep on !
 
 Makes me thinking that it's incredible the number of errors the Rust borrow checker
 sees in what I thought as universal idiomatic code ! I like that ! The result is way
-better, more logical. And it is satisfying !
+better, more logical. And it is satisfying, it kind of feels the program is perfect once 
+in phase with the borrow checker ;)
 
 ```rust
 use std::fs::File;
