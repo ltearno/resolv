@@ -1,5 +1,5 @@
-use crate::tools;
 use crate::rule::*;
+use crate::tools;
 use std::collections::HashMap;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};

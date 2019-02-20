@@ -68,7 +68,7 @@ fn fetch_lines(path: &str) -> Result<Vec<String>, String> {
             .map(|line| line.expect("cannot read line"))
             .collect()),
 
-        Err(e) => Result::Err(format!("did not find {}", path)),
+        Err(_) => Result::Err(format!("cannot open file '{}'", path)),
     }
 }
 

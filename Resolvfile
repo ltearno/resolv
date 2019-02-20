@@ -3,7 +3,9 @@
 # First rule
 Dire-bonjour :  Se-voir Et-voila toto.txt
     echo Hello
-    echo Hello3
+    echo $USER
+    export TOTO=5
+    echo "toto fait $TOTO"
 
 Se-voir : Etrela titi.txt
     echo "Viens!"
