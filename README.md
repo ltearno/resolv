@@ -422,6 +422,7 @@ Makes me thinking that it's incredible the number of errors the Rust borrow chec
 sees in what I thought as universal idiomatic code ! I like that ! The result is way
 better, more logical. And it is satisfying, it kind of feels the program is perfect once 
 in phase with the borrow checker ;)
+The more you get it, the more it feels natural and logical.
 
 ```rust
 use std::fs::File;

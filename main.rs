@@ -5,7 +5,7 @@ use std::io::BufReader;
 #[derive(Debug)]
 struct Rule<'a> {
     name: Option<&'a str>,
-    dependencies: Option<Vec<&'a str>>,
+    dependencies: Option<Vec<Dependency<'a>>>,
     script: Option<Vec<&'a str>>,
 }
 
@@ -43,7 +43,17 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
     if let None = r.name {
         r.name = Some(line);
     } else if let None = r.dependencies {
-        r.dependencies = Some(line.split(" ").collect());
+        r.dependencies = Some(
+            line.split(" ")
+                .map(|name| {
+                    if name.contains(".") {
+                        Dependency::Resource(name)
+                    } else {
+                        Dependency::Rule(name)
+                    }
+                })
+                .collect(),
+        );
     } else if let None = r.script {
         r.script = Some(vec![line]);
     } else if let Some(lines) = &mut r.script {
@@ -79,6 +89,14 @@ fn main() {
             None => println!("((in anonymous rule))"),
         }
 
+        if let Some(dependencies) = &rule.dependencies {
+            for dependency in dependencies {
+                if let Dependency::Resource(path)=dependency {
+                    println!("* use of resource {}", path);
+                }
+            }
+        }
+
         if let Some(script) = &rule.script {
             for command in script {
                 println!("{}", command);
@@ -100,7 +118,13 @@ fn build_plan<'a>(rules: &'a Vec<Rule<'a>>, first_rule: &str, plan: &mut Vec<&'a
         Some(rule) => {
             if let Some(dependencies) = &rule.dependencies {
                 for dependency in dependencies {
-                    build_plan(rules, dependency, plan);
+                    match dependency {
+                        Dependency::Rule(rule) => {
+                            build_plan(rules, rule, plan);
+                        }
+
+                        Dependency::Resource(_) => {}
+                    }
                 }
             }
 
