@@ -117,7 +117,7 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
 fn read_state_store() -> HashMap<String, u64> {
     let mut res: HashMap<String, u64> = HashMap::new();
 
-    if let Ok(file) = File::open(".resolve") {
+    if let Ok(file) = File::open(".resolv") {
         BufReader::new(&file).lines().for_each(|line| {
             if let Ok(line) = line {
                 let parts: Vec<&str> = line.split(":").collect();
@@ -133,7 +133,7 @@ fn read_state_store() -> HashMap<String, u64> {
 }
 
 fn store_state_store(rules_state_store: &HashMap<&str, u64>) {
-    let file = File::create(".resolve").expect("error opening cache file");
+    let file = File::create(".resolv").expect("error opening cache file");
     let mut writer = BufWriter::new(&file);
     for (name, value) in rules_state_store {
         match writer.write_all(format!("{}:{}\n", name, value).as_bytes()) {
@@ -149,12 +149,18 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut opts = Options::new();
     opts.optopt("f", "file", "set input file name", "NAME");
-    //opts.optflag("h", "help", "print this help menu");
+    opts.optflag("c", "clean", "clean state");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => panic!(f.to_string()),
     };
+
+    if matches.opt_present("c") {
+        std::fs::remove_file(".resolv").expect(
+            "cannot clean, there is already no state. You can ignore that, everything is fine.",
+        );
+    }
 
     let resolve_file_path = match matches.opt_str("f") {
         Some(path) => String::from(path),
