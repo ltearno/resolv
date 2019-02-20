@@ -9,6 +9,12 @@ struct Rule<'a> {
     script: Option<Vec<&'a str>>,
 }
 
+#[derive(Debug)]
+enum Dependency<'a> {
+    Resource(&'a str),
+    Rule(&'a str),
+}
+
 impl<'a> Rule<'a> {
     fn new() -> Rule<'a> {
         Rule {
