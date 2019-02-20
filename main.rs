@@ -5,7 +5,7 @@ use std::io::BufReader;
 #[derive(Debug)]
 struct Rule<'a> {
     name: Option<&'a str>,
-    dependencies: Option<&'a str>,
+    dependencies: Option<Vec<&'a str>>,
     script: Option<Vec<&'a str>>,
 }
 
@@ -37,7 +37,7 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
     if let None = r.name {
         r.name = Some(line);
     } else if let None = r.dependencies {
-        r.dependencies = Some(line);
+        r.dependencies = Some(line.split(" ").collect());
     } else if let None = r.script {
         r.script = Some(vec![line]);
     } else if let Some(lines) = &mut r.script {
