@@ -1,15 +1,12 @@
-use std::cmp::Ordering;
 use std::fs::File;
-use std::io;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::path::Path;
 
 #[derive(Debug)]
 struct Rule<'a> {
     name: Option<&'a str>,
     dependencies: Option<&'a str>,
-    script: Option<&'a str>,
+    script: Option<Vec<&'a str>>,
 }
 
 impl<'a> Rule<'a> {
@@ -27,19 +24,25 @@ enum State {
     Completing,
 }
 
-fn fetch_lines() -> Vec<String> {
+fn fetch_lines<'a>() -> Vec<String> {
     let f = File::open("Resolvfile").expect("did not find Resolvefile");
     let buf_reader = BufReader::new(&f);
-    let lines = buf_reader.lines();
+    buf_reader
+        .lines()
+        .map(|line| line.expect("cannot read line"))
+        .collect()
+}
 
-    let mut result = Vec::new();
-    for line in lines {
-        result.push(line.unwrap());
+fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
+    if let None = r.name {
+        r.name = Some(line);
+    } else if let None = r.dependencies {
+        r.dependencies = Some(line);
+    } else if let None = r.script {
+        r.script = Some(vec![line]);
+    } else if let Some(lines) = &mut r.script {
+        lines.push(line);
     }
-
-    result.push(String::from(""));
-
-    result
 }
 
 fn main() {
@@ -47,7 +50,14 @@ fn main() {
 
     let mut rules: Vec<Rule> = Vec::new();
 
-    let lines = fetch_lines();
+    let mut lines = fetch_lines();
+    lines.push(String::from(""));
+
+    let lines: Vec<&str> = lines
+        .iter()
+        .map(|line| line.as_str())
+        .map(|line| line.trim())
+        .collect();
 
     let mut current_rule = Rule::new();
     let mut state: State = State::Waiting;
@@ -65,7 +75,8 @@ fn main() {
         }
 
         if let State::Completing = state {
-            if line.is_empty() {
+            if line.starts_with("#") {
+            } else if line.is_empty() {
                 println!("processed rule {:?}", current_rule);
                 current_rule = push_and_prepare(&mut rules, current_rule);
 
@@ -76,15 +87,5 @@ fn main() {
         }
     }
 
-    println!("rules: {:?}", rules);
-}
-
-fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
-    if let None = r.name {
-        r.name = Some(line);
-    } else if let None = r.dependencies {
-        r.dependencies = Some(line);
-    } else if let None = r.script {
-        r.script = Some(line);
-    }
+    //println!("rules: {:?}", rules);
 }
