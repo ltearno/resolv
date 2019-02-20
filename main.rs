@@ -1,7 +1,8 @@
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
-use std::time::UNIX_EPOCH;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
 struct Rule<'a> {
@@ -21,22 +22,37 @@ impl<'a> Rule<'a> {
         }
     }
 
-    fn latest_run(&self) -> Option<u64> {
-        None
+    fn latest_run(&self, rules_state_store: &HashMap<&str, u64>) -> Option<u64> {
+        match self.name {
+            None => None,
+            Some(name) => match rules_state_store.get(name) {
+                None => None,
+                Some(timestamp) => Some(*timestamp),
+            },
+        }
     }
 }
 
 fn last_write_time(path: &str) -> u64 {
-    let f = File::open(path).expect("did not find file");
-    let res = f
-        .metadata()
-        .expect("cannot read metadata")
-        .modified()
-        .expect("cannot read modification time of a file");
+    match File::open(path) {
+        Err(e) => {
+            println!("did not find resource {}", path);
 
-    match res.duration_since(UNIX_EPOCH) {
-        Ok(n) => n.as_secs(),
-        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+            0
+        }
+
+        Ok(f) => {
+            let res = f
+                .metadata()
+                .expect("cannot read metadata")
+                .modified()
+                .expect("cannot read modification time of a file");
+
+            match res.duration_since(UNIX_EPOCH) {
+                Ok(n) => n.as_secs(),
+                Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+            }
+        }
     }
 }
 
@@ -96,8 +112,9 @@ fn complete_rule<'a>(r: &mut Rule<'a>, line: &'a str) {
 fn main() {
     println!("Resolv v0.1, welcome\n");
 
-    let lines = fetch_file();
+    let mut rules_state_store: HashMap<&str, u64> = HashMap::new();
 
+    let lines = fetch_file();
     let rules = parse_rules(&lines);
 
     // let's try to execute the first rule
@@ -111,8 +128,21 @@ fn main() {
     let rule = find_rule(&rules, to_build).expect("not found building rule");
     println!("found {:?}", rule);
 
+    run_for_rule(&rules, to_build, &mut rules_state_store);
+    run_for_rule(&rules, to_build, &mut rules_state_store);
+
+    //println!("plan: {:?}", plan);
+
+    println!("done");
+}
+
+fn run_for_rule<'a>(
+    rules: &'a Vec<Rule<'a>>,
+    to_build: &str,
+    rules_state_store: &mut HashMap<&'a str, u64>,
+) {
     let mut plan: Vec<&Rule> = Vec::new();
-    build_plan(&rules, to_build, &mut plan);
+    build_plan(rules, to_build, &mut plan, rules_state_store);
 
     println!("executing {}", to_build);
     for rule in &plan {
@@ -132,17 +162,24 @@ fn main() {
                 println!("{}", command);
             }
         }
+
+        if let Some(name) = rule.name {
+            rules_state_store.insert(
+                name,
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("error in time")
+                    .as_secs(),
+            );
+        }
     }
-
-    //println!("plan: {:?}", plan);
-
-    println!("done");
 }
 
 fn build_plan<'a>(
     rules: &'a Vec<Rule<'a>>,
     first_rule: &str,
     plan: &mut Vec<&'a Rule<'a>>,
+    rules_state_store: &HashMap<&'a str, u64>,
 ) -> bool {
     match find_rule(rules, first_rule) {
         None => {
@@ -152,12 +189,12 @@ fn build_plan<'a>(
         }
 
         Some(rule) => {
-            let own_last_execution = rule.latest_run();
+            let own_last_execution = rule.latest_run(rules_state_store);
             let mut execute_script: bool = own_last_execution.is_none();
 
             if let Some(dependencies) = &rule.dependencies {
                 for dependency in dependencies {
-                    let rebuilded = build_plan(rules, dependency, plan);
+                    let rebuilded = build_plan(rules, dependency, plan, rules_state_store);
 
                     execute_script = execute_script || rebuilded;
                 }
@@ -175,6 +212,8 @@ fn build_plan<'a>(
 
             if execute_script {
                 plan.push(&rule);
+            } else {
+                println!("((skipping task {}, already complete))", first_rule)
             }
 
             execute_script
