@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::time::UNIX_EPOCH;
 
 #[derive(Debug)]
 struct Rule<'a> {
@@ -20,13 +21,23 @@ impl<'a> Rule<'a> {
         }
     }
 
-    fn latest_run(&self) -> Option<u32> {
+    fn latest_run(&self) -> Option<u64> {
         None
     }
 }
 
-fn last_write_time(path: &str) -> u32 {
-    0
+fn last_write_time(path: &str) -> u64 {
+    let f = File::open(path).expect("did not find file");
+    let res = f
+        .metadata()
+        .expect("cannot read metadata")
+        .modified()
+        .expect("cannot read modification time of a file");
+
+    match res.duration_since(UNIX_EPOCH) {
+        Ok(n) => n.as_secs(),
+        Err(_) => panic!("SystemTime before UNIX EPOCH!"),
+    }
 }
 
 enum State {
