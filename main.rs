@@ -91,7 +91,7 @@ fn main() {
 
         if let Some(dependencies) = &rule.dependencies {
             for dependency in dependencies {
-                if let Dependency::Resource(path)=dependency {
+                if let Dependency::Resource(path) = dependency {
                     println!("* use of resource {}", path);
                 }
             }
@@ -152,8 +152,11 @@ fn fetch_file() -> Vec<String> {
     lines
 }
 
-fn push_and_prepare<'a>(rules: &mut Vec<Rule<'a>>, rule: Rule<'a>) -> Rule<'a> {
-    rules.push(rule);
+fn push_and_prepare<'a>(rules: &mut Vec<Rule<'a>>, rule: Option<Rule<'a>>) -> Rule<'a> {
+    if let Some(rule) = rule {
+        rules.push(rule);
+    }
+
     Rule::new()
 }
 
@@ -166,7 +169,7 @@ fn parse_rules<'a>(lines: &'a Vec<String>) -> Vec<Rule<'a>> {
         .map(|line| line.trim())
         .collect();
 
-    let mut current_rule = Rule::new();
+    let mut current_rule: Option<Rule> = None;
     let mut state: State = State::Waiting;
 
     for line in &lines {
@@ -180,11 +183,17 @@ fn parse_rules<'a>(lines: &'a Vec<String>) -> Vec<Rule<'a>> {
             if line.starts_with("#") {
             } else if line.is_empty() {
                 println!("processed rule {:?}", current_rule);
-                current_rule = push_and_prepare(&mut rules, current_rule);
+                current_rule = Some(push_and_prepare(&mut rules, current_rule));
 
                 state = State::Waiting;
             } else {
-                complete_rule(&mut current_rule, line);
+                if let None = current_rule {
+                    current_rule = Some(Rule::new());
+                }
+
+                if let Some(rule) = &mut current_rule {
+                    complete_rule(rule, line);
+                }
             }
         }
     }
